@@ -1,0 +1,68 @@
+/*
+	Spacebar: A FOSS re-implementation and extension of the Discord.com backend.
+	Copyright (C) 2023 Spacebar and Spacebar Contributors
+
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU Affero General Public License as published
+	by the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU Affero General Public License for more details.
+
+	You should have received a copy of the GNU Affero General Public License
+	along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
+import { Session, User } from "@spacebar/database";
+import { WebSocket, Payload } from "@spacebar/gateway";
+import { emitEvent, PresenceUpdateEvent } from "@spacebar/util";
+import { ActivitySchema, getInvalidSchemaValues, IdentifySchema, InternalStatusOrder, PrivateStatus, validateSchema } from "@spacebar/schemas";
+import { check } from "./instanceOf";
+
+export async function onPresenceUpdate(this: WebSocket, { d }: Payload) {
+    const startTime = Date.now();
+
+    // Check payload matches schema
+    try {
+        d = validateSchema<ActivitySchema>("ActivitySchema", d);
+    } catch (e) {
+        console.error("AJV validation of Activity schema failed:", e);
+        console.error("Provided values:");
+        if (Array.isArray(e))
+            for (const invalidSchemaValue of getInvalidSchemaValues(d, e)) {
+                console.error(`${invalidSchemaValue.instancePath}:`, invalidSchemaValue.value);
+            }
+
+        check.call(this, ActivitySchema, d);
+    }
+
+    const presence = d as ActivitySchema;
+
+    if (d.status === "unknown") {
+        const sessions = await Session.find({ where: { user_id: this.user_id } });
+        d.status = sessions.sort((a, b) => InternalStatusOrder[a.status] - InternalStatusOrder[b.status])[0].getPublicStatus();
+    }
+
+    await Session.update({ session_id: this.session_id }, { status: presence.status as PrivateStatus, activities: presence.activities });
+
+    const session = await Session.findOneOrFail({
+        select: { client_status: true },
+        where: { session_id: this.session_id },
+    });
+
+    await emitEvent({
+        event: "PRESENCE_UPDATE",
+        user_id: this.user_id,
+        data: {
+            user: await User.getPublicUser(this.user_id),
+            status: session.getPublicStatus(),
+            activities: presence.activities ?? [],
+            client_status: session.client_status,
+        },
+    } satisfies PresenceUpdateEvent);
+
+    console.log(`Presence update for user ${this.user_id} processed in ${Date.now() - startTime}ms`);
+}
